@@ -9,8 +9,8 @@ interface DailyForecastProps {
 export function DailyForecast({ weather }: DailyForecastProps) {
   return (
     <section className="animate-fade-in rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-md" style={{ animationDelay: '0.2s' }}>
-      <h2 className="mb-4 text-lg font-semibold text-white">7-Day Forecast</h2>
-      <div className="space-y-2">
+      <h2 className="mb-4 text-lg font-semibold text-white">30-Day Forecast</h2>
+      <div className="max-h-[32rem] space-y-2 overflow-y-auto pr-1">
         {weather.daily.time.map((day, index) => {
           const condition = getWeatherCondition(weather.daily.weatherCode[index])
           const isToday = index === 0
