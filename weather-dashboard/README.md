@@ -20,6 +20,14 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+## Live site (GitHub Pages)
+
+After enabling GitHub Pages in the repo settings, the dashboard is published at:
+
+**https://tummalag.github.io/cloud_agents/**
+
+> Note: `https://tummalag.github.io` only works if you create a separate repo named `tummalag.github.io`. This project uses project pages under `/cloud_agents/`.
+
 ## Tech Stack
 
 - [Vite](https://vitejs.dev/) + React + TypeScript
