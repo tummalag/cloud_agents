@@ -8,6 +8,8 @@ const DALLAS = {
   timezone: 'America/Chicago',
 }
 
+const FORECAST_DAYS = 30
+
 interface OpenMeteoResponse {
   current: {
     time: string
@@ -37,7 +39,17 @@ interface OpenMeteoResponse {
   }
 }
 
-function buildUrl(): string {
+interface EnsembleDailyResponse {
+  daily: {
+    time: string[]
+    weather_code: number[]
+    temperature_2m_max: number[]
+    temperature_2m_min: number[]
+    precipitation_sum: number[]
+  }
+}
+
+function buildForecastUrl(): string {
   const params = new URLSearchParams({
     latitude: String(DALLAS.latitude),
     longitude: String(DALLAS.longitude),
@@ -64,13 +76,36 @@ function buildUrl(): string {
     wind_speed_unit: 'mph',
     precipitation_unit: 'inch',
     timezone: DALLAS.timezone,
-    forecast_days: '7',
+    forecast_days: '16',
   })
 
   return `https://api.open-meteo.com/v1/forecast?${params}`
 }
 
-function mapResponse(data: OpenMeteoResponse): WeatherData {
+function buildEnsembleUrl(): string {
+  const params = new URLSearchParams({
+    latitude: String(DALLAS.latitude),
+    longitude: String(DALLAS.longitude),
+    daily: [
+      'weather_code',
+      'temperature_2m_max',
+      'temperature_2m_min',
+      'precipitation_sum',
+    ].join(','),
+    models: 'ecmwf_ifs025',
+    temperature_unit: 'fahrenheit',
+    precipitation_unit: 'inch',
+    timezone: DALLAS.timezone,
+    forecast_days: String(FORECAST_DAYS),
+  })
+
+  return `https://ensemble-api.open-meteo.com/v1/ensemble?${params}`
+}
+
+function mapResponse(
+  data: OpenMeteoResponse,
+  extendedDaily: EnsembleDailyResponse['daily'],
+): WeatherData {
   return {
     current: {
       time: data.current.time,
@@ -90,11 +125,11 @@ function mapResponse(data: OpenMeteoResponse): WeatherData {
       weatherCode: data.hourly.weather_code,
     },
     daily: {
-      time: data.daily.time,
-      weatherCode: data.daily.weather_code,
-      temperatureMax: data.daily.temperature_2m_max,
-      temperatureMin: data.daily.temperature_2m_min,
-      precipitationSum: data.daily.precipitation_sum,
+      time: extendedDaily.time,
+      weatherCode: extendedDaily.weather_code,
+      temperatureMax: extendedDaily.temperature_2m_max,
+      temperatureMin: extendedDaily.temperature_2m_min,
+      precipitationSum: extendedDaily.precipitation_sum,
       sunrise: data.daily.sunrise,
       sunset: data.daily.sunset,
     },
@@ -104,14 +139,23 @@ function mapResponse(data: OpenMeteoResponse): WeatherData {
 }
 
 export async function fetchDallasWeather(): Promise<WeatherData> {
-  const response = await fetch(buildUrl())
+  const [forecastResponse, ensembleResponse] = await Promise.all([
+    fetch(buildForecastUrl()),
+    fetch(buildEnsembleUrl()),
+  ])
 
-  if (!response.ok) {
-    throw new Error(`Weather API error: ${response.status} ${response.statusText}`)
+  if (!forecastResponse.ok) {
+    throw new Error(`Weather API error: ${forecastResponse.status} ${forecastResponse.statusText}`)
   }
 
-  const data: OpenMeteoResponse = await response.json()
-  return mapResponse(data)
+  if (!ensembleResponse.ok) {
+    throw new Error(`Extended forecast API error: ${ensembleResponse.status} ${ensembleResponse.statusText}`)
+  }
+
+  const forecastData: OpenMeteoResponse = await forecastResponse.json()
+  const ensembleData: EnsembleDailyResponse = await ensembleResponse.json()
+
+  return mapResponse(forecastData, ensembleData.daily)
 }
 
 export function formatTime(isoString: string, options?: Intl.DateTimeFormatOptions): string {

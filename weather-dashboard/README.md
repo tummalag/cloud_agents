@@ -7,7 +7,7 @@ A real-time weather dashboard for Dallas, Texas built with React, TypeScript, an
 - **Current conditions** — temperature, feels-like, and weather description
 - **Detailed stats** — humidity, wind, pressure, precipitation, sunrise & sunset
 - **Hourly forecast** — today's hour-by-hour outlook with precipitation probability
-- **7-day forecast** — daily highs, lows, and conditions
+- **30-day forecast** — daily highs, lows, and conditions
 - **Auto-refresh** — updates every 10 minutes
 
 ## Getting Started
