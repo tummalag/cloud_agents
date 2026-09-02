@@ -3,10 +3,10 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/cloud_agents/weather/',
+  base: '/cloud_agents/hand-ik/',
   plugins: [react(), tailwindcss()],
   server: {
     host: true,
-    port: 5173,
+    port: 5174,
   },
 })
