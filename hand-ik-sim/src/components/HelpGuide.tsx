@@ -54,10 +54,12 @@ const MANUAL_SECTIONS = [
     ],
   },
   {
-    title: 'Camera',
+    title: '3D camera',
     items: [
-      'Drag with one finger on empty space to orbit the view',
-      'Pinch to zoom (on supported devices)',
+      'Mobile: use TWO fingers to rotate and zoom the view',
+      'Desktop: right-click drag to orbit · scroll to zoom',
+      'Single finger / left-click = arm reaching only',
+      'Orbit fully around the robot — reach targets in true 3D',
     ],
   },
 ]

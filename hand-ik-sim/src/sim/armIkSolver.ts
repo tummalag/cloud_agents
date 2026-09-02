@@ -2,6 +2,7 @@ import { Vector3 } from 'three'
 import {
   ARM_DEFS,
   REACH_THRESHOLD,
+  TORSO_CENTER,
   type ArmDefinition,
   type ArmSide,
   type DualArmPose,
@@ -12,6 +13,11 @@ import {
 const _v0 = new Vector3()
 const _v1 = new Vector3()
 const _v2 = new Vector3()
+const _v3 = new Vector3()
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v))
+}
 
 function targetToVec(t: TargetPoint): Vector3 {
   return new Vector3(t.x, t.y, t.z)
@@ -23,87 +29,82 @@ function clampTarget(shoulder: Vector3, target: Vector3, maxReach: number): Vect
   return _v0.copy(target).sub(shoulder).normalize().multiplyScalar(maxReach * 0.98).add(shoulder)
 }
 
-function initChain(def: ArmDefinition): Vector3[] {
-  const [upper, forearm, hand] = def.segmentLengths
-  const shoulder = def.shoulder
-  const forward = def.side === 'left' ? -0.3 : 0.3
-  const dir = _v0.set(forward, -0.4, 0.6).normalize()
+/** Two-bone IK (shoulder → elbow → wrist) with pole vector for natural elbow bend */
+function solveTwoBoneIK(
+  shoulder: Vector3,
+  wristTarget: Vector3,
+  poleWorld: Vector3,
+  upperLen: number,
+  foreLen: number,
+): { elbow: Vector3; wrist: Vector3 } {
+  const toWrist = _v0.copy(wristTarget).sub(shoulder)
+  let dist = toWrist.length()
+  const maxReach = upperLen + foreLen
 
-  const elbow = _v1.copy(shoulder).add(dir.clone().multiplyScalar(upper))
-  const wrist = _v2.copy(elbow).add(dir.clone().multiplyScalar(forearm))
-  const end = wrist.clone().add(dir.clone().multiplyScalar(hand))
-
-  return [shoulder.clone(), elbow, wrist, end]
-}
-
-function applyElbowPole(joints: Vector3[], def: ArmDefinition): void {
-  if (joints.length < 3) return
-  const shoulder = joints[0]
-  const elbow = joints[1]
-  const wrist = joints[2]
-
-  const mid = _v0.addVectors(shoulder, wrist).multiplyScalar(0.5)
-  const toElbow = _v1.subVectors(elbow, mid)
-  const desired = _v2.copy(def.poleOffset).normalize().multiplyScalar(0.15)
-
-  elbow.add(desired.sub(toElbow.normalize().multiplyScalar(0.15)))
-
-  const upperLen = def.segmentLengths[0]
-  const foreLen = def.segmentLengths[1]
-  const toWrist = wrist.clone().sub(shoulder)
-  const distSW = toWrist.length()
-  if (distSW < 0.001 || distSW > upperLen + foreLen) return
-
-  const cosAngle = (upperLen * upperLen + distSW * distSW - foreLen * foreLen) / (2 * upperLen * distSW)
-  const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle)))
-  const axis = toWrist.clone().cross(def.poleOffset).normalize()
-  if (axis.lengthSq() < 0.001) return
-
-  const dirToWrist = toWrist.clone().normalize()
-  const newElbow = shoulder
-    .clone()
-    .add(
-      dirToWrist
-        .clone()
-        .applyAxisAngle(axis, angle * 0.5)
-        .normalize()
-        .multiplyScalar(upperLen),
-    )
-  joints[1].lerp(newElbow, 0.35)
-}
-
-function solveFABRIK(def: ArmDefinition, target: Vector3, iterations = 20): Vector3[] {
-  const lengths = def.segmentLengths
-  const totalLen = lengths.reduce((a, b) => a + b, 0)
-  const shoulder = def.shoulder
-  const clamped = clampTarget(shoulder, target, totalLen)
-
-  const joints = initChain(def)
-
-  for (let iter = 0; iter < iterations; iter++) {
-    joints[joints.length - 1].copy(clamped)
-
-    for (let i = joints.length - 2; i >= 0; i--) {
-      const dir = _v0.subVectors(joints[i], joints[i + 1]).normalize()
-      joints[i].copy(joints[i + 1]).add(dir.multiplyScalar(lengths[i]))
-    }
-
-    joints[0].copy(shoulder)
-    for (let i = 0; i < joints.length - 1; i++) {
-      const dir = _v0.subVectors(joints[i + 1], joints[i]).normalize()
-      joints[i + 1].copy(joints[i]).add(dir.multiplyScalar(lengths[i]))
-    }
-
-    if (iter % 4 === 3) applyElbowPole(joints, def)
+  if (dist < 0.001) {
+    toWrist.set(0, -1, 0.3).normalize()
+    dist = 0.3
+  } else {
+    toWrist.normalize()
   }
 
-  return joints.map((j) => j.clone())
+  if (dist >= maxReach * 0.995) {
+    const elbow = shoulder.clone().add(toWrist.clone().multiplyScalar(upperLen))
+    const wrist = shoulder.clone().add(toWrist.clone().multiplyScalar(maxReach * 0.995))
+    return { elbow, wrist }
+  }
+
+  const cosShoulder =
+    (upperLen * upperLen + dist * dist - foreLen * foreLen) / (2 * upperLen * dist)
+  const shoulderAngle = Math.acos(clamp(cosShoulder, -1, 1))
+
+  const toPole = _v1.copy(poleWorld).sub(shoulder)
+  const planeNormal = _v2.copy(toWrist).cross(toPole)
+  if (planeNormal.lengthSq() < 1e-8) {
+    planeNormal.set(0, 1, 0).cross(toWrist)
+  }
+  planeNormal.normalize()
+
+  const bendDir = _v3.copy(planeNormal).cross(toWrist).normalize()
+
+  const elbowDir = toWrist
+    .clone()
+    .multiplyScalar(Math.cos(shoulderAngle))
+    .add(bendDir.multiplyScalar(Math.sin(shoulderAngle)))
+
+  const elbow = shoulder.clone().add(elbowDir.multiplyScalar(upperLen))
+  const wristDir = wristTarget.clone().sub(elbow).normalize()
+  const wrist = elbow.clone().add(wristDir.multiplyScalar(foreLen))
+
+  return { elbow, wrist }
+}
+
+function solveArmChain(def: ArmDefinition, target: Vector3): Vector3[] {
+  const [upperLen, foreLen, handLen] = def.segmentLengths
+  const shoulder = def.shoulder
+  const totalReach = upperLen + foreLen + handLen
+  const clampedTarget = clampTarget(shoulder, target, totalReach)
+
+  const poleWorld = shoulder.clone().add(def.poleOffset)
+
+  const toTarget = _v0.copy(clampedTarget).sub(shoulder).normalize()
+  const wristTarget = _v1.copy(clampedTarget).sub(toTarget.clone().multiplyScalar(handLen))
+
+  const { elbow, wrist } = solveTwoBoneIK(shoulder, wristTarget, poleWorld, upperLen, foreLen)
+
+  const handDir = _v2.copy(clampedTarget).sub(wrist).normalize()
+  const endEffector =
+    handDir.lengthSq() > 0.001
+      ? wrist.clone().add(handDir.multiplyScalar(handLen))
+      : wrist.clone().add(toTarget.multiplyScalar(handLen))
+
+  return [shoulder.clone(), elbow, wrist, endEffector]
 }
 
 export function solveArm(def: ArmDefinition, target: TargetPoint): SolvedArm {
   const targetVec = targetToVec(target)
-  const joints = solveFABRIK(def, targetVec)
-  const endEffector = joints[joints.length - 1]
+  const joints = solveArmChain(def, targetVec)
+  const endEffector = joints[3]
   const error = endEffector.distanceTo(targetVec)
 
   return {
@@ -116,17 +117,18 @@ export function solveArm(def: ArmDefinition, target: TargetPoint): SolvedArm {
   }
 }
 
-export function solveDualArms(
-  leftTarget: TargetPoint,
-  rightTarget: TargetPoint,
-): DualArmPose {
+export function solveDualArms(leftTarget: TargetPoint, rightTarget: TargetPoint): DualArmPose {
   return {
     left: solveArm(ARM_DEFS.left, leftTarget),
     right: solveArm(ARM_DEFS.right, rightTarget),
-    torsoCenter: new Vector3(0, 1.0, 0),
+    torsoCenter: TORSO_CENTER.clone(),
   }
 }
 
 export function screenSideFromX(clientX: number, width: number): ArmSide {
   return clientX < width / 2 ? 'left' : 'right'
 }
+
+/** Sphere around torso for true 3D touch raycasting */
+export const REACH_SPHERE_CENTER = TORSO_CENTER.clone()
+export const REACH_SPHERE_RADIUS = 0.85

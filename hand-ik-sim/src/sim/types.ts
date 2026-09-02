@@ -43,7 +43,7 @@ export const ARM_DEFS: Record<ArmSide, ArmDefinition> = {
     segmentLengths: [0.34, 0.30, 0.14],
     color: '#00f0ff',
     glowColor: '#00f0ff',
-    poleOffset: new Vector3(-0.5, 0, 0.2),
+    poleOffset: new Vector3(-0.6, -0.4, -0.15),
   },
   right: {
     side: 'right',
@@ -51,7 +51,7 @@ export const ARM_DEFS: Record<ArmSide, ArmDefinition> = {
     segmentLengths: [0.34, 0.30, 0.14],
     color: '#ff00aa',
     glowColor: '#ff6bcc',
-    poleOffset: new Vector3(0.5, 0, 0.2),
+    poleOffset: new Vector3(0.6, -0.4, -0.15),
   },
 }
 
