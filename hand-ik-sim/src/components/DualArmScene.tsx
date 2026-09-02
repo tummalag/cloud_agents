@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, Grid, Sparkles } from '@react-three/drei'
 import { Suspense } from 'react'
+import { MOUSE, TOUCH } from 'three'
 import { DualArmModel } from './DualArmModel'
 import { ReachLine } from './ReachLine'
 import { TouchController } from './TouchController'
@@ -21,11 +22,12 @@ function SceneContent({ pose, leftTarget, rightTarget, onTouch }: DualArmScenePr
   return (
     <>
       <color attach="background" args={['#050510']} />
-      <fog attach="fog" args={['#050510', 4, 14]} />
+      <fog attach="fog" args={['#050510', 5, 16]} />
 
       <ambientLight intensity={0.35} />
       <pointLight position={[2, 3, 2]} intensity={1.2} color="#00f0ff" />
       <pointLight position={[-2, 1, -1]} intensity={0.8} color="#ff00aa" />
+      <pointLight position={[0, 2, -2]} intensity={0.5} color="#a855f7" />
       <spotLight position={[0, 4, 1]} angle={0.5} penumbra={0.8} intensity={1.5} color="#a855f7" />
 
       <Stars radius={80} depth={40} count={2500} factor={3} saturation={0.2} fade speed={0.5} />
@@ -40,7 +42,7 @@ function SceneContent({ pose, leftTarget, rightTarget, onTouch }: DualArmScenePr
         sectionSize={1}
         sectionThickness={1}
         sectionColor="#00f0ff"
-        fadeDistance={8}
+        fadeDistance={10}
         fadeStrength={1}
         infiniteGrid
       />
@@ -57,11 +59,22 @@ function SceneContent({ pose, leftTarget, rightTarget, onTouch }: DualArmScenePr
 
       <OrbitControls
         makeDefault
-        enableRotate={false}
+        enableDamping
+        dampingFactor={0.06}
         enablePan={false}
-        minDistance={2}
-        maxDistance={7}
-        target={[0, 1.0, 0.2]}
+        minDistance={1.8}
+        maxDistance={8}
+        minPolarAngle={0.15}
+        maxPolarAngle={Math.PI - 0.15}
+        target={[0, 1.0, 0.1]}
+        mouseButtons={{
+          LEFT: MOUSE.PAN,
+          MIDDLE: MOUSE.DOLLY,
+          RIGHT: MOUSE.ROTATE,
+        }}
+        touches={{
+          TWO: TOUCH.DOLLY_ROTATE,
+        }}
       />
     </>
   )
@@ -70,7 +83,7 @@ function SceneContent({ pose, leftTarget, rightTarget, onTouch }: DualArmScenePr
 export function DualArmScene(props: DualArmSceneProps) {
   return (
     <Canvas
-      camera={{ position: [0, 1.2, 3.2], fov: 50, near: 0.1, far: 50 }}
+      camera={{ position: [0, 1.1, 3.5], fov: 52, near: 0.1, far: 50 }}
       gl={{ antialias: true }}
       style={{ width: '100%', height: '100%', touchAction: 'none' }}
     >

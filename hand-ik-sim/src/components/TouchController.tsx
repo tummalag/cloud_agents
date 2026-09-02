@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
-import { Plane, Vector2, Vector3 } from 'three'
-import { screenSideFromX } from '../sim/armIkSolver'
+import { Sphere, Vector2, Vector3 } from 'three'
+import { REACH_SPHERE_CENTER, REACH_SPHERE_RADIUS, screenSideFromX } from '../sim/armIkSolver'
 import type { ArmSide, TargetPoint } from '../sim/types'
 
 const _hit = new Vector3()
-const TOUCH_PLANE = new Plane(new Vector3(0, 0, 1), -0.45)
+const _hit2 = new Vector3()
+const REACH_SPHERE = new Sphere(REACH_SPHERE_CENTER, REACH_SPHERE_RADIUS)
 
 interface TouchControllerProps {
   onTouch: (side: ArmSide, point: TargetPoint) => void
@@ -14,6 +15,7 @@ interface TouchControllerProps {
 export function TouchController({ onTouch }: TouchControllerProps) {
   const { camera, raycaster, gl } = useThree()
   const dragging = useRef(false)
+  const activePointers = useRef(new Set<number>())
 
   useEffect(() => {
     const el = gl.domElement
@@ -23,46 +25,65 @@ export function TouchController({ onTouch }: TouchControllerProps) {
       const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1
       const ndcY = -((clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(new Vector2(ndcX, ndcY), camera)
-      if (!raycaster.ray.intersectPlane(TOUCH_PLANE, _hit)) return null
+
+      const hits = raycaster.ray.intersectSphere(REACH_SPHERE, _hit)
+      if (hits === null) {
+        const far = raycaster.ray.at(2.5, _hit2)
+        return {
+          x: clamp(far.x, -0.8, 0.8),
+          y: clamp(far.y, 0.3, 1.5),
+          z: clamp(far.z, -0.3, 1.2),
+        }
+      }
+
       return {
-        x: Math.max(-0.75, Math.min(0.75, _hit.x)),
-        y: Math.max(0.35, Math.min(1.45, _hit.y)),
-        z: Math.max(0.15, Math.min(1.1, _hit.z)),
+        x: clamp(_hit.x, -0.8, 0.8),
+        y: clamp(_hit.y, 0.3, 1.5),
+        z: clamp(_hit.z, -0.3, 1.2),
       }
     }
 
     const handlePointerDown = (e: PointerEvent) => {
+      activePointers.current.add(e.pointerId)
+      if (activePointers.current.size > 1) {
+        dragging.current = false
+        return
+      }
+      e.stopPropagation()
       dragging.current = true
       const point = projectTouch(e.clientX, e.clientY)
       if (!point) return
-      const side = screenSideFromX(e.clientX, window.innerWidth)
-      onTouch(side, point)
+      onTouch(screenSideFromX(e.clientX, window.innerWidth), point)
     }
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!dragging.current) return
+      if (!dragging.current || activePointers.current.size > 1) return
       const point = projectTouch(e.clientX, e.clientY)
       if (!point) return
-      const side = screenSideFromX(e.clientX, window.innerWidth)
-      onTouch(side, point)
+      onTouch(screenSideFromX(e.clientX, window.innerWidth), point)
     }
 
-    const handlePointerUp = () => {
-      dragging.current = false
+    const handlePointerUp = (e: PointerEvent) => {
+      activePointers.current.delete(e.pointerId)
+      if (activePointers.current.size === 0) dragging.current = false
     }
 
-    el.addEventListener('pointerdown', handlePointerDown)
-    el.addEventListener('pointermove', handlePointerMove)
-    el.addEventListener('pointerup', handlePointerUp)
-    el.addEventListener('pointercancel', handlePointerUp)
+    el.addEventListener('pointerdown', handlePointerDown, { capture: true })
+    el.addEventListener('pointermove', handlePointerMove, { capture: true })
+    el.addEventListener('pointerup', handlePointerUp, { capture: true })
+    el.addEventListener('pointercancel', handlePointerUp, { capture: true })
 
     return () => {
-      el.removeEventListener('pointerdown', handlePointerDown)
-      el.removeEventListener('pointermove', handlePointerMove)
-      el.removeEventListener('pointerup', handlePointerUp)
-      el.removeEventListener('pointercancel', handlePointerUp)
+      el.removeEventListener('pointerdown', handlePointerDown, { capture: true })
+      el.removeEventListener('pointermove', handlePointerMove, { capture: true })
+      el.removeEventListener('pointerup', handlePointerUp, { capture: true })
+      el.removeEventListener('pointercancel', handlePointerUp, { capture: true })
     }
   }, [camera, gl, onTouch, raycaster])
 
   return null
+}
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v))
 }

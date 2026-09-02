@@ -79,7 +79,9 @@ export default function App() {
           <span className="text-cyan-400">Tap left half</span> → left arm reaches ·{' '}
           <span className="text-pink-400">Tap right half</span> → right arm reaches
         </p>
-        <p className="mt-2 text-[10px] text-slate-500">Drag to move target · Pinch/drag background to rotate camera</p>
+        <p className="mt-2 text-[10px] text-slate-500">
+          1 finger = reach · 2 fingers = rotate &amp; zoom · Right-click drag = orbit (desktop)
+        </p>
       </div>
     </div>
   )
