@@ -162,6 +162,11 @@ input[type='range']::-moz-range-thumb {
   transform: scale(0.92);
 }
 
+.camera-btn:active {
+  transform: scale(0.92);
+  background: rgba(0, 240, 255, 0.12);
+}
+
 .finger-label-3d {
   pointer-events: none;
   user-select: none;

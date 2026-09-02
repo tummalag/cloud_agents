@@ -51,16 +51,18 @@ export function TouchController({ onTouch }: TouchControllerProps) {
       }
       e.stopPropagation()
       dragging.current = true
+      const rect = el.getBoundingClientRect()
       const point = projectTouch(e.clientX, e.clientY)
       if (!point) return
-      onTouch(screenSideFromX(e.clientX, window.innerWidth), point)
+      onTouch(screenSideFromX(e.clientX, rect.width), point)
     }
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!dragging.current || activePointers.current.size > 1) return
+      const rect = el.getBoundingClientRect()
       const point = projectTouch(e.clientX, e.clientY)
       if (!point) return
-      onTouch(screenSideFromX(e.clientX, window.innerWidth), point)
+      onTouch(screenSideFromX(e.clientX, rect.width), point)
     }
 
     const handlePointerUp = (e: PointerEvent) => {

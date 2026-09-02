@@ -1,28 +1,38 @@
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Stars, Grid, Sparkles } from '@react-three/drei'
+import { Stars, Grid, Sparkles } from '@react-three/drei'
 import { Suspense } from 'react'
-import { MOUSE, TOUCH } from 'three'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { DualArmModel } from './DualArmModel'
-import { ReachLine } from './ReachLine'
+import { SceneCamera, CameraZoomBridge } from './SceneCamera'
 import { TouchController } from './TouchController'
 import { TouchTarget } from './TouchTarget'
 import type { ArmSide, DualArmPose, TargetPoint } from '../sim/types'
 
-interface DualArmSceneProps {
-  pose: DualArmPose
+export interface DualArmSceneProps {
+  targetPose: DualArmPose
   leftTarget: TargetPoint
   rightTarget: TargetPoint
   onTouch: (side: ArmSide, point: TargetPoint) => void
+  controlsRef: React.RefObject<OrbitControlsImpl | null>
+  zoomInRef: React.MutableRefObject<(() => void) | null>
+  zoomOutRef: React.MutableRefObject<(() => void) | null>
+  resetRef: React.MutableRefObject<(() => void) | null>
 }
 
-function SceneContent({ pose, leftTarget, rightTarget, onTouch }: DualArmSceneProps) {
-  const leftEnd = pose.left.joints[3]
-  const rightEnd = pose.right.joints[3]
-
+function SceneContent({
+  targetPose,
+  leftTarget,
+  rightTarget,
+  onTouch,
+  controlsRef,
+  zoomInRef,
+  zoomOutRef,
+  resetRef,
+}: DualArmSceneProps) {
   return (
     <>
       <color attach="background" args={['#050510']} />
-      <fog attach="fog" args={['#050510', 5, 16]} />
+      <fog attach="fog" args={['#050510', 5, 18]} />
 
       <ambientLight intensity={0.35} />
       <pointLight position={[2, 3, 2]} intensity={1.2} color="#00f0ff" />
@@ -47,35 +57,15 @@ function SceneContent({ pose, leftTarget, rightTarget, onTouch }: DualArmScenePr
         infiniteGrid
       />
 
-      <DualArmModel pose={pose} />
+      <DualArmModel targetPose={targetPose} leftTarget={leftTarget} rightTarget={rightTarget} />
 
-      <ReachLine from={leftEnd} to={[leftTarget.x, leftTarget.y, leftTarget.z]} color="#00f0ff" reached={pose.left.reached} />
-      <ReachLine from={rightEnd} to={[rightTarget.x, rightTarget.y, rightTarget.z]} color="#ff00aa" reached={pose.right.reached} />
-
-      <TouchTarget target={leftTarget} color="#00f0ff" reached={pose.left.reached} />
-      <TouchTarget target={rightTarget} color="#ff00aa" reached={pose.right.reached} />
+      <TouchTarget target={leftTarget} color="#00f0ff" reached={targetPose.left.reached} />
+      <TouchTarget target={rightTarget} color="#ff00aa" reached={targetPose.right.reached} />
 
       <TouchController onTouch={onTouch} />
 
-      <OrbitControls
-        makeDefault
-        enableDamping
-        dampingFactor={0.06}
-        enablePan={false}
-        minDistance={1.8}
-        maxDistance={8}
-        minPolarAngle={0.15}
-        maxPolarAngle={Math.PI - 0.15}
-        target={[0, 1.0, 0.1]}
-        mouseButtons={{
-          LEFT: MOUSE.PAN,
-          MIDDLE: MOUSE.DOLLY,
-          RIGHT: MOUSE.ROTATE,
-        }}
-        touches={{
-          TWO: TOUCH.DOLLY_ROTATE,
-        }}
-      />
+      <SceneCamera controlsRef={controlsRef} />
+      <CameraZoomBridge controlsRef={controlsRef} zoomInRef={zoomInRef} zoomOutRef={zoomOutRef} resetRef={resetRef} />
     </>
   )
 }
@@ -83,7 +73,7 @@ function SceneContent({ pose, leftTarget, rightTarget, onTouch }: DualArmScenePr
 export function DualArmScene(props: DualArmSceneProps) {
   return (
     <Canvas
-      camera={{ position: [0, 1.1, 3.5], fov: 52, near: 0.1, far: 50 }}
+      camera={{ position: [0, 1.1, 3.2], fov: 52, near: 0.1, far: 50 }}
       gl={{ antialias: true }}
       style={{ width: '100%', height: '100%', touchAction: 'none' }}
     >

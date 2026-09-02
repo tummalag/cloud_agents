@@ -54,12 +54,22 @@ const MANUAL_SECTIONS = [
     ],
   },
   {
-    title: '3D camera',
+    title: 'Smooth human-like motion',
     items: [
-      'Mobile: use TWO fingers to rotate and zoom the view',
-      'Desktop: right-click drag to orbit · scroll to zoom',
-      'Single finger / left-click = arm reaching only',
-      'Orbit fully around the robot — reach targets in true 3D',
+      'Arms no longer snap instantly — each joint moves smoothly',
+      'Elbow leads, then wrist, then hand (proximal → distal)',
+      'Joints glow brighter while actuators are moving',
+      'Motion eases out naturally as the arm approaches the target',
+    ],
+  },
+  {
+    title: '3D camera — full 360°',
+    items: [
+      'Mobile: 2 fingers to orbit and pinch-zoom around the robot',
+      'Desktop: right-click drag to orbit · scroll wheel to zoom',
+      'Use + / − buttons (top-right) to zoom in on the hands',
+      '⟲ button resets the camera to the default view',
+      'Orbit fully around the bot in all directions',
     ],
   },
 ]
