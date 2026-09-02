@@ -1,3 +1,4 @@
+import { Html } from '@react-three/drei'
 import { useRef, useState } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useFrame, useThree } from '@react-three/fiber'
@@ -107,6 +108,20 @@ export function TargetMarker({ target, reached, onTargetChange }: TargetMarkerPr
           </mesh>
         )
       })}
+
+      <Html position={[0, 0.16, 0]} center distanceFactor={6}>
+        <div
+          className="finger-label-3d whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs font-bold tracking-wide"
+          style={{
+            borderColor: color,
+            color,
+            background: 'rgba(0,0,0,0.75)',
+            boxShadow: `0 0 12px ${color}66`,
+          }}
+        >
+          {reached ? '✓ TARGET' : 'DRAG TARGET'}
+        </div>
+      </Html>
     </group>
   )
 }

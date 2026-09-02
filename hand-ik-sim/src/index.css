@@ -139,6 +139,34 @@ input[type='range']::-moz-range-thumb {
   padding-top: 1.5rem;
 }
 
+.guide-overlay {
+  backdrop-filter: blur(4px);
+}
+
+.guide-card {
+  animation: slide-up 0.3s ease;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.help-btn:active {
+  transform: scale(0.92);
+}
+
+.finger-label-3d {
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Larger touch targets on mobile */
 @media (max-width: 767px) {
   input[type='range'] {

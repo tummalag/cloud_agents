@@ -1,7 +1,16 @@
+import { Html } from '@react-three/drei'
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Mesh, Quaternion, Vector3 } from 'three'
 import type { FingerName, HandPose, SolvedFinger } from '../sim/types'
+
+const FINGER_LABELS: Record<FingerName, string> = {
+  thumb: 'THUMB',
+  index: 'INDEX',
+  middle: 'MIDDLE',
+  ring: 'RING',
+  pinky: 'PINKY',
+}
 
 interface HandModelProps {
   pose: HandPose
@@ -40,11 +49,11 @@ function BoneSegment({
       <meshStandardMaterial
         color={color}
         emissive={emissive}
-        emissiveIntensity={isActive ? 0.6 : 0.2}
+        emissiveIntensity={isActive ? 0.6 : 0.1}
         metalness={0.7}
         roughness={0.3}
         transparent
-        opacity={0.9}
+        opacity={isActive ? 0.95 : 0.35}
       />
     </mesh>
   )
@@ -52,19 +61,22 @@ function BoneSegment({
 
 function FingerMesh({ finger, isActive, showSkeleton }: { finger: SolvedFinger; isActive: boolean; showSkeleton: boolean }) {
   const joints = finger.joints
+  const dimmed = !isActive
 
   return (
     <group>
       {showSkeleton &&
         joints.map((joint, i) => (
           <mesh key={`joint-${i}`} position={joint.position.toArray()}>
-            <sphereGeometry args={[isActive ? 0.035 : 0.025, 16, 16]} />
+            <sphereGeometry args={[isActive ? 0.035 : 0.02, 16, 16]} />
             <meshStandardMaterial
               color={finger.color}
               emissive={finger.glowColor}
-              emissiveIntensity={isActive ? 1.2 : 0.4}
+              emissiveIntensity={isActive ? 1.2 : 0.15}
               metalness={0.8}
               roughness={0.2}
+              transparent
+              opacity={dimmed ? 0.4 : 1}
             />
           </mesh>
         ))}
@@ -74,7 +86,7 @@ function FingerMesh({ finger, isActive, showSkeleton }: { finger: SolvedFinger; 
           <BoneSegment
             start={joints[0].position}
             end={joints[1].position}
-            radius={isActive ? 0.022 : 0.016}
+            radius={isActive ? 0.024 : 0.014}
             color={finger.color}
             emissive={finger.glowColor}
             isActive={isActive}
@@ -82,7 +94,7 @@ function FingerMesh({ finger, isActive, showSkeleton }: { finger: SolvedFinger; 
           <BoneSegment
             start={joints[1].position}
             end={joints[2].position}
-            radius={isActive ? 0.019 : 0.014}
+            radius={isActive ? 0.02 : 0.012}
             color={finger.color}
             emissive={finger.glowColor}
             isActive={isActive}
@@ -90,7 +102,7 @@ function FingerMesh({ finger, isActive, showSkeleton }: { finger: SolvedFinger; 
           <BoneSegment
             start={joints[2].position}
             end={joints[3].position}
-            radius={isActive ? 0.016 : 0.012}
+            radius={isActive ? 0.017 : 0.01}
             color={finger.color}
             emissive={finger.glowColor}
             isActive={isActive}
@@ -99,15 +111,25 @@ function FingerMesh({ finger, isActive, showSkeleton }: { finger: SolvedFinger; 
       )}
 
       <mesh position={finger.tip.toArray()}>
-        <sphereGeometry args={[isActive ? 0.028 : 0.018, 12, 12]} />
+        <sphereGeometry args={[isActive ? 0.032 : 0.014, 12, 12]} />
         <meshStandardMaterial
           color="#ffffff"
           emissive={finger.glowColor}
-          emissiveIntensity={isActive ? 2 : 0.6}
+          emissiveIntensity={isActive ? 2.5 : 0.3}
           metalness={1}
           roughness={0.1}
+          transparent
+          opacity={dimmed ? 0.5 : 1}
         />
       </mesh>
+
+      {isActive && (
+        <Html position={[finger.tip.x, finger.tip.y + 0.08, finger.tip.z]} center distanceFactor={6}>
+          <div className="finger-label-3d whitespace-nowrap rounded-full border border-white/30 bg-black/70 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white">
+            {FINGER_LABELS[finger.name]} → reaching
+          </div>
+        </Html>
+      )}
     </group>
   )
 }
@@ -139,6 +161,11 @@ function Palm({ wrist }: { wrist: Vector3 }) {
         <boxGeometry args={[0.68, 0.04, 0.46]} />
         <meshStandardMaterial color="#0d1b2a" metalness={0.8} roughness={0.4} />
       </mesh>
+      <Html position={[0, 0.12, 0.18]} center distanceFactor={8}>
+        <div className="finger-label-3d whitespace-nowrap rounded border border-slate-500/50 bg-black/60 px-2 py-0.5 text-[9px] font-semibold tracking-widest text-slate-300">
+          PALM
+        </div>
+      </Html>
     </group>
   )
 }
