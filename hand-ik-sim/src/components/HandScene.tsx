@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, Grid, Float, Sparkles } from '@react-three/drei'
 import { Suspense } from 'react'
 import { HandModel } from './HandModel'
+import { ReachLine } from './ReachLine'
 import { TargetMarker } from './TargetMarker'
 import type { FingerName, HandPose, TargetPoint } from '../sim/types'
 
@@ -57,6 +58,12 @@ function SceneContent({
       <Float speed={1.2} rotationIntensity={0.05} floatIntensity={0.15}>
         <HandModel pose={pose} activeFinger={activeFinger} showSkeleton={showSkeleton} />
       </Float>
+
+      {(() => {
+        const active = pose.fingers.find((f) => f.name === activeFinger)
+        if (!active) return null
+        return <ReachLine from={active.tip} to={[target.x, target.y, target.z]} reached={reached} />
+      })()}
 
       <TargetMarker target={target} reached={reached} onTargetChange={onTargetChange} />
 
