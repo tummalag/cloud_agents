@@ -4,22 +4,21 @@ import type { Vector3 } from 'three'
 interface ReachLineProps {
   from: Vector3
   to: [number, number, number]
+  color: string
   reached: boolean
 }
 
-export function ReachLine({ from, to, reached }: ReachLineProps) {
-  const color = reached ? '#00ff88' : '#ff00aa'
-
+export function ReachLine({ from, to, color, reached }: ReachLineProps) {
   return (
     <Line
       points={[from, to]}
-      color={color}
-      lineWidth={reached ? 2 : 1.5}
-      dashed
-      dashSize={0.06}
-      gapSize={0.04}
+      color={reached ? '#00ff88' : color}
+      lineWidth={reached ? 2.5 : 1.5}
+      dashed={!reached}
+      dashSize={0.05}
+      gapSize={0.035}
       transparent
-      opacity={0.7}
+      opacity={0.75}
     />
   )
 }
