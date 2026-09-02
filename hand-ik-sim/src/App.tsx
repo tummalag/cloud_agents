@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ControlPanel } from './components/ControlPanel'
+import { ControlPanel, FINGERS } from './components/ControlPanel'
 import { HandScene } from './components/HandScene'
 import { defaultTarget, solveHandIK } from './sim/ikSolver'
 import type { FingerName, TargetPoint } from './sim/types'
@@ -9,6 +9,7 @@ export default function App() {
   const [activeFinger, setActiveFinger] = useState<FingerName>('index')
   const [showSkeleton, setShowSkeleton] = useState(true)
   const [showGrid, setShowGrid] = useState(true)
+  const [panelOpen, setPanelOpen] = useState(false)
 
   const ikResult = useMemo(() => solveHandIK(target, activeFinger), [target, activeFinger])
 
@@ -19,6 +20,7 @@ export default function App() {
   const handlePreset = useCallback((presetTarget: TargetPoint, finger: FingerName) => {
     setTarget(presetTarget)
     setActiveFinger(finger)
+    setPanelOpen(false)
   }, [])
 
   return (
@@ -34,9 +36,10 @@ export default function App() {
         onTargetChange={setTarget}
       />
 
-      <header className="pointer-events-none absolute top-0 right-0 left-0 z-10 flex items-start justify-between p-5">
+      {/* Desktop header */}
+      <header className="pointer-events-none absolute top-0 right-0 left-0 z-10 hidden items-start justify-between p-5 md:flex">
         <div>
-          <h1 className="font-display neon-text text-2xl font-bold tracking-widest text-cyan-300 md:text-3xl">
+          <h1 className="font-display neon-text text-3xl font-bold tracking-widest text-cyan-300">
             NEUROREACH
           </h1>
           <p className="mt-1 text-sm tracking-wide text-cyan-200/60">
@@ -52,6 +55,18 @@ export default function App() {
         </div>
       </header>
 
+      {/* Mobile header — compact, doesn't block the view */}
+      <header className="pointer-events-none absolute top-0 right-0 left-0 z-10 flex items-center justify-between px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 md:hidden">
+        <h1 className="font-display neon-text text-lg font-bold tracking-widest text-cyan-300">NEUROREACH</h1>
+        <div
+          className={`glass-panel pointer-events-auto rounded-full px-3 py-1 text-xs font-semibold ${
+            ikResult.reached ? 'text-emerald-300' : 'text-amber-300'
+          }`}
+        >
+          {ikResult.reached ? '● LOCKED' : `${(ikResult.error * 100).toFixed(0)}cm`}
+        </div>
+      </header>
+
       <ControlPanel
         target={target}
         activeFinger={activeFinger}
@@ -59,6 +74,8 @@ export default function App() {
         showGrid={showGrid}
         reached={ikResult.reached}
         error={ikResult.error}
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
         onTargetChange={handleTargetChange}
         onFingerChange={setActiveFinger}
         onShowSkeletonChange={setShowSkeleton}
@@ -66,7 +83,42 @@ export default function App() {
         onPreset={handlePreset}
       />
 
-      <footer className="pointer-events-none absolute right-0 bottom-0 left-0 z-10 p-4 text-center text-xs text-slate-500">
+      {/* Mobile quick bar — finger picker + controls button, stays at bottom */}
+      <div className="mobile-quick-bar pointer-events-none absolute right-0 bottom-0 left-0 z-20 flex flex-col gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
+        <p className="pointer-events-none text-center text-[10px] text-slate-500/80">
+          Tap &amp; drag the glowing sphere to move the target
+        </p>
+        <div className="pointer-events-auto flex items-center gap-2">
+          <div className="flex flex-1 gap-1.5 overflow-x-auto rounded-xl border border-cyan-900/40 bg-slate-950/80 p-1.5 backdrop-blur-md">
+            {FINGERS.map(({ name, label, color }) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setActiveFinger(name)}
+                className={`shrink-0 rounded-lg px-2.5 py-2 text-xs font-bold transition-all ${
+                  activeFinger === name ? 'text-white' : 'text-slate-400'
+                }`}
+                style={
+                  activeFinger === name
+                    ? { backgroundColor: `${color}44`, borderColor: color, borderWidth: 1 }
+                    : { borderWidth: 1, borderColor: 'transparent' }
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPanelOpen(true)}
+            className="controls-fab shrink-0 rounded-xl border border-cyan-400/40 bg-cyan-950/90 px-4 py-3 text-sm font-bold text-cyan-300 backdrop-blur-md"
+          >
+            ⚙
+          </button>
+        </div>
+      </div>
+
+      <footer className="pointer-events-none absolute right-0 bottom-0 left-0 z-10 hidden p-4 text-center text-xs text-slate-500 md:block">
         Drag the glowing target sphere · Adjust coordinates in the panel · Click presets for demo poses
       </footer>
     </div>

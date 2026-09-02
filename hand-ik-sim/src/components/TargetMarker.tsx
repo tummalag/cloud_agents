@@ -78,6 +78,16 @@ export function TargetMarker({ target, reached, onTargetChange }: TargetMarkerPr
         />
       </mesh>
 
+      {/* Invisible larger hit area for touch */}
+      <mesh
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerMove={handlePointerMove}
+      >
+        <sphereGeometry args={[0.14, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+
       <mesh ref={ringRef}>
         <torusGeometry args={[0.1, 0.004, 8, 32]} />
         <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={1.5} transparent opacity={0.7} />

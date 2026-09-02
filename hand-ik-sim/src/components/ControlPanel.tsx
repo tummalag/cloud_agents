@@ -8,6 +8,8 @@ interface ControlPanelProps {
   showGrid: boolean
   reached: boolean
   error: number
+  open: boolean
+  onClose: () => void
   onTargetChange: (partial: Partial<TargetPoint>) => void
   onFingerChange: (finger: FingerName) => void
   onShowSkeletonChange: (show: boolean) => void
@@ -29,7 +31,7 @@ const AXES = [
   { key: 'z' as const, label: 'Z', min: 0.1, max: 1.2, color: '#4488ff' },
 ]
 
-export function ControlPanel({
+function PanelContent({
   target,
   activeFinger,
   showSkeleton,
@@ -41,9 +43,9 @@ export function ControlPanel({
   onShowSkeletonChange,
   onShowGridChange,
   onPreset,
-}: ControlPanelProps) {
+}: Omit<ControlPanelProps, 'open' | 'onClose'>) {
   return (
-    <aside className="glass-panel absolute top-20 left-4 z-20 w-72 rounded-xl p-5 md:w-80">
+    <>
       <h2 className="font-display mb-4 text-xs font-semibold tracking-[0.2em] text-cyan-400">
         TARGET COORDINATES
       </h2>
@@ -79,7 +81,7 @@ export function ControlPanel({
               step={0.01}
               value={target[key]}
               onChange={(e) => onTargetChange({ [key]: parseFloat(e.target.value) || 0 })}
-              className="w-full rounded border border-cyan-900/50 bg-slate-900/80 px-2 py-1 font-mono text-sm text-cyan-100 outline-none focus:border-cyan-400/60"
+              className="w-full rounded border border-cyan-900/50 bg-slate-900/80 px-2 py-1.5 font-mono text-sm text-cyan-100 outline-none focus:border-cyan-400/60"
             />
           </div>
         ))}
@@ -88,16 +90,16 @@ export function ControlPanel({
       <h2 className="font-display mt-6 mb-3 text-xs font-semibold tracking-[0.2em] text-cyan-400">
         END EFFECTOR
       </h2>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {FINGERS.map(({ name, label, color }) => (
           <button
             key={name}
             type="button"
             onClick={() => onFingerChange(name)}
-            className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-all ${
+            className={`rounded-full border px-3 py-2 text-sm font-semibold transition-all ${
               activeFinger === name
                 ? 'border-white/40 text-white'
-                : 'border-slate-700 text-slate-400 hover:border-slate-500'
+                : 'border-slate-700 text-slate-400'
             }`}
             style={activeFinger === name ? { backgroundColor: `${color}33`, borderColor: color } : {}}
           >
@@ -109,13 +111,13 @@ export function ControlPanel({
       <h2 className="font-display mt-6 mb-3 text-xs font-semibold tracking-[0.2em] text-cyan-400">
         PRESETS
       </h2>
-      <div className="grid grid-cols-1 gap-1.5">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {PRESET_TARGETS.map((preset) => (
           <button
             key={preset.name}
             type="button"
             onClick={() => onPreset(preset.target, preset.finger)}
-            className="preset-btn rounded-lg border border-slate-700/80 px-3 py-2 text-left text-sm text-slate-300"
+            className="preset-btn rounded-lg border border-slate-700/80 px-3 py-2.5 text-left text-sm text-slate-300"
           >
             {preset.name}
           </button>
@@ -149,6 +151,53 @@ export function ControlPanel({
           {reached ? 'Converged' : `Solving… Δ=${(error * 100).toFixed(1)}cm`}
         </div>
       </div>
-    </aside>
+    </>
   )
 }
+
+export function ControlPanel(props: ControlPanelProps) {
+  const { open, onClose, ...contentProps } = props
+
+  return (
+    <>
+      {/* Desktop: fixed left sidebar */}
+      <aside className="glass-panel absolute top-20 left-4 z-20 hidden max-h-[calc(100vh-6rem)] w-80 overflow-y-auto rounded-xl p-5 md:block">
+        <PanelContent {...contentProps} />
+      </aside>
+
+      {/* Mobile: bottom sheet */}
+      {open && (
+        <button
+          type="button"
+          aria-label="Close controls"
+          className="mobile-backdrop fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={`mobile-sheet glass-panel fixed right-0 bottom-0 left-0 z-40 max-h-[78vh] overflow-y-auto rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:hidden ${
+          open ? 'mobile-sheet-open pointer-events-auto' : 'pointer-events-none'
+        }`}
+        aria-hidden={!open}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div className="mx-auto h-1 w-10 rounded-full bg-slate-600" aria-hidden />
+        </div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-display text-sm font-semibold tracking-[0.15em] text-cyan-300">CONTROLS</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300"
+          >
+            Done
+          </button>
+        </div>
+        <PanelContent {...contentProps} />
+      </aside>
+    </>
+  )
+}
+
+export { FINGERS, PRESET_TARGETS }
